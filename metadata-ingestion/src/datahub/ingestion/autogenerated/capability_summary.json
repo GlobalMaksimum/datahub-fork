@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-12-12T22:09:52.396845+00:00",
+  "generated_at": "2025-12-13T00:16:24.693534+00:00",
   "generated_by": "metadata-ingestion/scripts/capability_summary.py",
   "plugin_details": {
     "abs": {
@@ -541,44 +541,6 @@
       "platform_id": "file-based-lineage",
       "platform_name": "File Based Lineage",
       "support_status": "CERTIFIED"
-    },
-    "dataplex": {
-      "capabilities": [
-        {
-          "capability": "CONTAINERS",
-          "description": "Links BigQuery datasets to BigQuery dataset containers. Supports dual API extraction: Entries API (Universal Catalog) for system-managed resources, and Entities API (Lakes/Zones) for Dataplex-managed assets. Dataplex hierarchy (lakes, zones, assets) preserved as custom properties.",
-          "subtype_modifier": null,
-          "supported": true
-        },
-        {
-          "capability": "DELETION_DETECTION",
-          "description": "Enabled by default when stateful ingestion is configured. Tracks entities from both Entries API (Universal Catalog) and Entities API (Lakes/Zones).",
-          "subtype_modifier": null,
-          "supported": true
-        },
-        {
-          "capability": "SCHEMA_METADATA",
-          "description": "Extract schema information from Entries API (Universal Catalog) and Entities API (discovered tables/filesets). Schema extraction can be disabled via include_schema config for faster ingestion.",
-          "subtype_modifier": null,
-          "supported": true
-        },
-        {
-          "capability": "LINEAGE_COARSE",
-          "description": "Extract table-level lineage from Dataplex Lineage API. Supports configurable retry logic (lineage_max_retries, lineage_retry_backoff_multiplier) for handling transient errors.",
-          "subtype_modifier": null,
-          "supported": true
-        },
-        {
-          "capability": "TEST_CONNECTION",
-          "description": "Verifies connectivity to Dataplex API, including both Entries API (Universal Catalog) and Entities API (Lakes/Zones) if enabled.",
-          "subtype_modifier": null,
-          "supported": true
-        }
-      ],
-      "classname": "datahub.ingestion.source.dataplex.dataplex.DataplexSource",
-      "platform_id": "dataplex",
-      "platform_name": "Dataplex",
-      "support_status": "INCUBATING"
     },
     "dbt": {
       "capabilities": [
@@ -1256,9 +1218,8 @@
         },
         {
           "capability": "LINEAGE_FINE",
-          "description": "Enabled by default for views via `include_view_column_lineage`, and to storage via `include_column_lineage` when storage lineage is enabled",
+          "description": "Enabled by default to get lineage for views via `include_view_column_lineage`",
           "subtype_modifier": [
-            "Table",
             "View"
           ],
           "supported": true
@@ -1295,9 +1256,8 @@
         },
         {
           "capability": "LINEAGE_COARSE",
-          "description": "Enabled by default for views via `include_view_lineage`, and to upstream/downstream storage via `emit_storage_lineage`",
+          "description": "Enabled by default to get lineage for views via `include_view_lineage`",
           "subtype_modifier": [
-            "Table",
             "View"
           ],
           "supported": true
@@ -1309,7 +1269,7 @@
           "supported": true
         }
       ],
-      "classname": "datahub.ingestion.source.sql.hive.hive_source.HiveSource",
+      "classname": "datahub.ingestion.source.sql.hive.HiveSource",
       "platform_id": "hive",
       "platform_name": "Hive",
       "support_status": "CERTIFIED"
@@ -1333,9 +1293,8 @@
         },
         {
           "capability": "LINEAGE_FINE",
-          "description": "Enabled by default for views via `include_view_lineage`, and to storage via `include_column_lineage` when storage lineage is enabled",
+          "description": "Enabled by default to get lineage for views via `include_view_column_lineage`",
           "subtype_modifier": [
-            "Table",
             "View"
           ],
           "supported": true
@@ -1372,12 +1331,9 @@
         },
         {
           "capability": "LINEAGE_COARSE",
-          "description": "Enabled by default for views via `include_view_lineage`, and to upstream/downstream storage via `emit_storage_lineage`",
-          "subtype_modifier": [
-            "Table",
-            "View"
-          ],
-          "supported": true
+          "description": "View lineage is not supported",
+          "subtype_modifier": null,
+          "supported": false
         },
         {
           "capability": "TEST_CONNECTION",
@@ -1386,7 +1342,7 @@
           "supported": true
         }
       ],
-      "classname": "datahub.ingestion.source.sql.hive.hive_metastore_source.HiveMetastoreSource",
+      "classname": "datahub.ingestion.source.sql.hive_metastore.HiveMetastoreSource",
       "platform_id": "hive-metastore",
       "platform_name": "Hive Metastore",
       "support_status": "CERTIFIED"
@@ -2561,9 +2517,8 @@
         },
         {
           "capability": "LINEAGE_FINE",
-          "description": "Enabled by default for views via `include_view_lineage`, and to storage via `include_column_lineage` when storage lineage is enabled",
+          "description": "Enabled by default to get lineage for views via `include_view_column_lineage`",
           "subtype_modifier": [
-            "Table",
             "View"
           ],
           "supported": true
@@ -2600,12 +2555,9 @@
         },
         {
           "capability": "LINEAGE_COARSE",
-          "description": "Enabled by default for views via `include_view_lineage`, and to upstream/downstream storage via `emit_storage_lineage`",
-          "subtype_modifier": [
-            "Table",
-            "View"
-          ],
-          "supported": true
+          "description": "View lineage is not supported",
+          "subtype_modifier": null,
+          "supported": false
         },
         {
           "capability": "TEST_CONNECTION",
@@ -2614,7 +2566,7 @@
           "supported": true
         }
       ],
-      "classname": "datahub.ingestion.source.sql.hive.hive_metastore_source.HiveMetastoreSource",
+      "classname": "datahub.ingestion.source.sql.hive_metastore.HiveMetastoreSource",
       "platform_id": "hive-metastore",
       "platform_name": "Hive Metastore",
       "support_status": "CERTIFIED"
@@ -2711,6 +2663,62 @@
       "classname": "datahub.ingestion.source.qlik_sense.qlik_sense.QlikSenseSource",
       "platform_id": "qlik-sense",
       "platform_name": "Qlik Sense",
+      "support_status": "INCUBATING"
+    },
+    "rdf": {
+      "capabilities": [
+        {
+          "capability": "DATA_PROFILING",
+          "description": "Not applicable",
+          "subtype_modifier": null,
+          "supported": false
+        },
+        {
+          "capability": "DESCRIPTIONS",
+          "description": "Enabled by default (from skos:definition or rdfs:comment)",
+          "subtype_modifier": null,
+          "supported": true
+        },
+        {
+          "capability": "DELETION_DETECTION",
+          "description": "Enabled via stateful_ingestion.enabled: true",
+          "subtype_modifier": null,
+          "supported": true
+        },
+        {
+          "capability": "DOMAINS",
+          "description": "Not applicable (domains used internally for hierarchy)",
+          "subtype_modifier": null,
+          "supported": false
+        },
+        {
+          "capability": "OWNERSHIP",
+          "description": "Not supported",
+          "subtype_modifier": null,
+          "supported": false
+        },
+        {
+          "capability": "TAGS",
+          "description": "Not supported",
+          "subtype_modifier": null,
+          "supported": false
+        },
+        {
+          "capability": "PLATFORM_INSTANCE",
+          "description": "Supported via platform_instance config",
+          "subtype_modifier": null,
+          "supported": true
+        },
+        {
+          "capability": "LINEAGE_COARSE",
+          "description": "Not in MVP",
+          "subtype_modifier": null,
+          "supported": false
+        }
+      ],
+      "classname": "datahub.ingestion.source.rdf.ingestion.rdf_source.RDFSource",
+      "platform_id": "rdf",
+      "platform_name": "RDF",
       "support_status": "INCUBATING"
     },
     "redash": {
@@ -3727,62 +3735,6 @@
       "platform_id": "vertica",
       "platform_name": "Vertica",
       "support_status": "CERTIFIED"
-    },
-    "rdf": {
-      "platform_id": "rdf",
-      "platform_name": "RDF",
-      "classname": "datahub.ingestion.source.rdf.ingestion.rdf_source.RDFSource",
-      "support_status": "INCUBATING",
-      "capabilities": [
-        {
-          "capability": "DELETION_DETECTION",
-          "description": "Enabled via stateful_ingestion.enabled: true",
-          "subtype_modifier": null,
-          "supported": true
-        },
-        {
-          "capability": "TAGS",
-          "description": "Not supported",
-          "subtype_modifier": null,
-          "supported": false
-        },
-        {
-          "capability": "OWNERSHIP",
-          "description": "Not supported",
-          "subtype_modifier": null,
-          "supported": false
-        },
-        {
-          "capability": "LINEAGE_COARSE",
-          "description": "Not in MVP",
-          "subtype_modifier": null,
-          "supported": false
-        },
-        {
-          "capability": "DATA_PROFILING",
-          "description": "Not applicable",
-          "subtype_modifier": null,
-          "supported": false
-        },
-        {
-          "capability": "DOMAINS",
-          "description": "Not applicable (domains used internally for hierarchy)",
-          "subtype_modifier": null,
-          "supported": false
-        },
-        {
-          "capability": "DESCRIPTIONS",
-          "description": "Enabled by default (from skos:definition or rdfs:comment)",
-          "subtype_modifier": null,
-          "supported": true
-        },
-        {
-          "capability": "PLATFORM_INSTANCE",
-          "description": "Supported via platform_instance config",
-          "subtype_modifier": null,
-          "supported": true
-        }
-      ]
     }
   }
 }
