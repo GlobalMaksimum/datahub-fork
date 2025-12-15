@@ -143,7 +143,7 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: |
             ~/.cache/uv
@@ -151,7 +151,7 @@ jobs:
           restore-keys: |
             ${{ needs.setup.outputs.uv_cache_key_prefix }}
 
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: |
             ~/.cache/yarn
@@ -191,7 +191,7 @@ jobs:
           sudo rm -rf /usr/local/lib/android/ || true
           sudo docker image prune -a -f || true
 
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: |
             ~/.cache/uv
@@ -199,7 +199,7 @@ jobs:
           restore-keys: |
             ${{ needs.setup.outputs.uv_cache_key_prefix }}
 
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: |
             ~/.cache/yarn
@@ -368,14 +368,14 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           override_branch: ${{ github.head_ref || github.ref_name }}
 
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v5
         if: ${{ matrix.profile == 'quickstart-consumers' && matrix.test_strategy == 'pytests' }}
         with:
           path: |
             ~/.cache/uv
           key: ${{ needs.setup.outputs.uv_cache_key }}
 
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v5
         if: ${{ matrix.profile == 'quickstart-consumers' && matrix.test_strategy == 'pytests' }}
         with:
           path: |
