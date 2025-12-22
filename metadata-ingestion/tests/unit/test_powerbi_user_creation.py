@@ -853,3 +853,299 @@ class TestToDatahubUsersMethod:
         mcps = mapper.to_datahub_users(users)  # type: ignore[arg-type]
 
         assert len(mcps) == 1
+
+
+class TestCheckUserExistsCoverage:
+    """Additional tests to ensure 100% coverage of _check_user_exists method."""
+
+    def test_check_user_exists_cache_hit_returns_cached_value(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """Cache hit should return cached value without API call."""
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        # Pre-populate cache
+        mapper._user_exists_cache["urn:li:corpuser:cached_user"] = True
+
+        # Call should return cached value
+        result = mapper._check_user_exists("urn:li:corpuser:cached_user")
+
+        assert result is True
+        # API should NOT be called
+        mock_pipeline_context.graph.get_entities.assert_not_called()
+
+    def test_check_user_exists_no_graph_returns_false(
+        self,
+        mock_pipeline_context_no_graph,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """No graph access should return False without caching or API calls."""
+        # Verify graph is actually None (this is the condition for line 183-184)
+        assert mock_pipeline_context_no_graph.graph is None
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context_no_graph,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        # This should hit line 183-184: if not self.__ctx.graph: return False
+        result = mapper._check_user_exists("urn:li:corpuser:any_user")
+
+        # Verify the early return happened (line 184)
+        assert result is False
+        # Cache should NOT be modified (early return before caching)
+        assert "urn:li:corpuser:any_user" not in mapper._user_exists_cache
+
+    def test_check_user_exists_user_found(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """User exists in DataHub should return True and cache it."""
+        mock_pipeline_context.graph.get_entities.return_value = {
+            "urn:li:corpuser:existing_user": {
+                "corpUserInfo": (MagicMock(spec=CorpUserInfoClass), None)
+            }
+        }
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        result = mapper._check_user_exists("urn:li:corpuser:existing_user")
+
+        assert result is True
+        assert mapper._user_exists_cache["urn:li:corpuser:existing_user"] is True
+
+    def test_check_user_exists_user_not_found(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """User not in DataHub should return False and cache it."""
+        mock_pipeline_context.graph.get_entities.return_value = {}
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        result = mapper._check_user_exists("urn:li:corpuser:new_user")
+
+        assert result is False
+        assert mapper._user_exists_cache["urn:li:corpuser:new_user"] is False
+
+    def test_check_user_exists_api_error_caches_false(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """API error should cache False and return False."""
+        mock_pipeline_context.graph.get_entities.side_effect = Exception("API Error")
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        with patch("datahub.ingestion.source.powerbi.powerbi.logger"):
+            result = mapper._check_user_exists("urn:li:corpuser:error_user")
+
+        assert result is False
+        assert mapper._user_exists_cache["urn:li:corpuser:error_user"] is False
+
+
+class TestShouldSkipUserCoverage:
+    """Additional tests to ensure 100% coverage of _should_skip_user method."""
+
+    def test_should_skip_user_overwrite_true_never_skips(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """overwrite_existing_users=True should never skip."""
+        mock_config.ownership.overwrite_existing_users = True
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        result = mapper._should_skip_user("urn:li:corpuser:any_user")
+
+        assert result is False
+        # API should NOT be called when overwrite=True
+        mock_pipeline_context.graph.get_entities.assert_not_called()
+
+    def test_should_skip_user_no_graph_warns_and_returns_false(
+        self,
+        mock_pipeline_context_no_graph,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """No graph + overwrite=False should warn and return False."""
+        mock_config.ownership.overwrite_existing_users = False
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context_no_graph,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        with patch("datahub.ingestion.source.powerbi.powerbi.logger") as mock_logger:
+            result = mapper._should_skip_user("urn:li:corpuser:any_user")
+
+            assert result is False
+            mock_logger.warning.assert_called_once()
+            warning_msg = mock_logger.warning.call_args[0][0]
+            assert "overwrite_existing_users=False" in warning_msg
+            assert "Graph unavailable" in warning_msg
+
+    def test_should_skip_user_existing_user_returns_true(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """Existing user + overwrite=False should return True (skip)."""
+        mock_config.ownership.overwrite_existing_users = False
+        mock_pipeline_context.graph.get_entities.return_value = {
+            "urn:li:corpuser:existing": {"corpUserInfo": (MagicMock(), None)}
+        }
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        result = mapper._should_skip_user("urn:li:corpuser:existing")
+
+        assert result is True
+
+
+class TestToDatahubUserCoverage:
+    """Additional tests to ensure 100% coverage of to_datahub_user method."""
+
+    def test_to_datahub_user_skips_existing_user_logs_debug(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+        sample_user,
+    ):
+        """Skipping existing user should log debug message."""
+        mock_config.ownership.overwrite_existing_users = False
+        mock_pipeline_context.graph.get_entities.return_value = {
+            "urn:li:corpuser:john.doe@company.com": {
+                "corpUserInfo": (MagicMock(), None)
+            }
+        }
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        with patch("datahub.ingestion.source.powerbi.powerbi.logger") as mock_logger:
+            mcps = mapper.to_datahub_user(sample_user)
+
+            assert len(mcps) == 0
+            # Verify debug was called with skip message
+            debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+            assert any("Skipping user" in str(call) for call in debug_calls)
+
+    def test_to_datahub_user_logs_debug_for_missing_email(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+        sample_user_no_email,
+    ):
+        """User without email should log debug message."""
+        mock_pipeline_context.graph.get_entities.return_value = {}
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        with patch("datahub.ingestion.source.powerbi.powerbi.logger") as mock_logger:
+            mcps = mapper.to_datahub_user(sample_user_no_email)
+
+            assert len(mcps) == 1
+            # Verify debug was called about missing email
+            debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+            assert any("has no email" in str(call) for call in debug_calls)
+
+    def test_to_datahub_user_logs_debug_for_missing_display_name(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """User without displayName should log debug message."""
+        user_no_display = User(
+            id="user999",
+            displayName="",
+            emailAddress="test@company.com",
+            graphId="graph-999",
+            principalType="User",
+        )
+        mock_pipeline_context.graph.get_entities.return_value = {}
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        with patch("datahub.ingestion.source.powerbi.powerbi.logger") as mock_logger:
+            mcps = mapper.to_datahub_user(user_no_display)
+
+            assert len(mcps) == 1
+            # Verify debug was called about missing displayName
+            debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+            assert any("has no displayName" in str(call) for call in debug_calls)

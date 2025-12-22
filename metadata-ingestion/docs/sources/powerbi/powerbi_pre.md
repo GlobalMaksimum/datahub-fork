@@ -214,9 +214,19 @@ When `overwrite_existing_users=false` (default):
 
 - **Existing users are never updated**, even if PowerBI has newer/better data
 - **Example:** If a user exists with `email=null` but PowerBI has an email, it won't be populated
-- **Workaround:** Temporarily set `overwrite_existing_users=true` for one ingestion run to refresh all users
+- **Workaround:** Temporarily set `overwrite_existing_users=true` for one ingestion run to refresh all users:
 
-**If PowerBI is your authoritative source for user data**, set `overwrite_existing_users=true`.
+```yaml
+# One-time refresh: Set overwrite_existing_users=true, run once, then revert to false
+source:
+  type: powerbi
+  config:
+    ownership:
+      create_corp_user: true
+      overwrite_existing_users: true # Temporarily enable to refresh all users
+```
+
+**If PowerBI is your authoritative source for user data**, set `overwrite_existing_users=true` permanently.
 
 ### URN Configuration
 
