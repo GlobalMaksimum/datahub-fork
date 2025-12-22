@@ -133,6 +133,9 @@ class Mapper:
         self.__reporter = reporter
         self.__dataplatform_instance_resolver = dataplatform_instance_resolver
         self.workspace_key: Optional[ContainerKey] = None
+        # Per-run cache for user existence checks. Intentionally not persisted between runs
+        # to ensure fresh existence checks each ingestion. This avoids stale cache issues
+        # while still preventing redundant API calls within a single run.
         self._user_exists_cache: Dict[str, bool] = {}
 
     @staticmethod

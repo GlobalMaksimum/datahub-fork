@@ -9,7 +9,6 @@ causing existing user data to be overwritten with incomplete data.
 from unittest.mock import MagicMock, patch
 
 import pytest
-from datahub.metadata.schema_classes import CorpUserInfoClass, CorpUserKeyClass
 
 from datahub.ingestion.api.common import PipelineContext
 from datahub.ingestion.source.powerbi.config import (
@@ -22,6 +21,7 @@ from datahub.ingestion.source.powerbi.dataplatform_instance_resolver import (
 )
 from datahub.ingestion.source.powerbi.powerbi import Mapper
 from datahub.ingestion.source.powerbi.rest_api_wrapper.data_classes import User
+from datahub.metadata.schema_classes import CorpUserInfoClass, CorpUserKeyClass
 
 
 @pytest.fixture

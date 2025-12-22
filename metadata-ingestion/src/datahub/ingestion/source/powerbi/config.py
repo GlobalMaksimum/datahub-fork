@@ -277,7 +277,8 @@ class OwnershipMapping(ConfigModel):
             "When False (default), existing users are skipped to prevent overwriting "
             "data from authoritative sources like LDAP/SCIM/Okta. "
             "Set to True only if PowerBI is your authoritative source for user data. "
-            "Note: Requires DataHub graph access; file-based sinks will create users with a warning."
+            "Note: When False, requires DataHub graph access (REST sink) to check user existence. "
+            "File-based sinks lack graph access and will create all users with a warning logged."
         ),
     )
     use_powerbi_email: bool = pydantic.Field(

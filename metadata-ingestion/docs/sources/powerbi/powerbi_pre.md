@@ -187,22 +187,23 @@ source:
   type: powerbi
   config:
     ownership:
-      create_corp_user: true           # Create users (default: true)
-      overwrite_existing_users: false  # Protect existing users (default: false)
-      use_powerbi_email: true          # Use email for user URN (default: true)
+      create_corp_user: true # Create users (default: true)
+      overwrite_existing_users: false # Protect existing users (default: false)
+      use_powerbi_email: true # Use email for user URN (default: true)
 ```
 
 ### Behavior Matrix
 
-| `create_corp_user` | `overwrite_existing_users` | New Users | Existing Users |
-|--------------------|---------------------------|-----------|----------------|
-| `false` | N/A | Not created | Not updated |
-| `true` | `false` (default) | Created with PowerBI data | **Skipped** (preserved) |
-| `true` | `true` | Created with PowerBI data | **Overwritten** with PowerBI data |
+| `create_corp_user` | `overwrite_existing_users` | New Users                 | Existing Users                    |
+| ------------------ | -------------------------- | ------------------------- | --------------------------------- |
+| `false`            | N/A                        | Not created               | Not updated                       |
+| `true`             | `false` (default)          | Created with PowerBI data | **Skipped** (preserved)           |
+| `true`             | `true`                     | Created with PowerBI data | **Overwritten** with PowerBI data |
 
 ### Traceability
 
 PowerBI user metadata is stored in `customProperties`:
+
 - `powerbi_user_id`: Original PowerBI user ID
 - `powerbi_graph_id`: Microsoft Graph ID (if available)
 - `powerbi_principal_type`: Principal type (User, App, Group, etc.)
@@ -221,17 +222,38 @@ When `overwrite_existing_users=false` (default):
 
 The user URN format is controlled by these options:
 
-| `use_powerbi_email` | `remove_email_suffix` | URN Format |
-|---------------------|----------------------|------------|
-| `true` (default) | `false` (default) | `urn:li:corpuser:john.doe@company.com` |
-| `true` | `true` | `urn:li:corpuser:john.doe` |
-| `false` | N/A | `urn:li:corpuser:users.{powerbi_user_id}` |
+| `use_powerbi_email` | `remove_email_suffix` | URN Format                                |
+| ------------------- | --------------------- | ----------------------------------------- |
+| `true` (default)    | `false` (default)     | `urn:li:corpuser:john.doe@company.com`    |
+| `true`              | `true`                | `urn:li:corpuser:john.doe`                |
+| `false`             | N/A                   | `urn:li:corpuser:users.{powerbi_user_id}` |
 
 ### Notes
 
-- If graph access is unavailable (e.g., file-based sink), `overwrite_existing_users=false` cannot
-  check for existing users. A warning is logged and users are created.
+- **Graph access requirement:** `overwrite_existing_users=false` requires DataHub graph access to
+  check if users exist. This works automatically when using the DataHub REST sink. File-based sinks
+  (e.g., writing to JSON files) don't have graph access.
 - Non-human principals (Apps, Service Principals, Groups) are marked as `active=false`
 - Invalid config combinations (e.g., `create_corp_user=false` + `overwrite_existing_users=true`)
   will raise a validation error
-- User existence checks are cached per ingestion run for performance
+- User existence checks are cached per ingestion run for performance (cache is not persisted
+  between runs, ensuring fresh checks each time)
+
+### Troubleshooting
+
+**Warning: "Graph unavailable - creating all users"**
+
+This warning appears when `overwrite_existing_users=false` but the ingestion pipeline doesn't
+have graph access (typically file-based sinks). Solutions:
+
+- Use the DataHub REST sink instead of file-based output
+- Set `overwrite_existing_users=true` to suppress the warning (users will be created/updated)
+- Set `create_corp_user=false` if you don't need user creation at all
+
+**Users not being updated with new PowerBI data**
+
+If existing users aren't getting updated with new data from PowerBI:
+
+- This is expected behavior when `overwrite_existing_users=false` (default)
+- Set `overwrite_existing_users=true` for one ingestion run to refresh all users
+- Or keep it `true` if PowerBI is your authoritative user source
