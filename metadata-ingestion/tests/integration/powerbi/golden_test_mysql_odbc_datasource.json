@@ -402,10 +402,18 @@
     "entityType": "corpuser",
     "entityUrn": "urn:li:corpuser:john.doe@acryldata.io",
     "changeType": "UPSERT",
-    "aspectName": "corpUserKey",
+    "aspectName": "corpUserInfo",
     "aspect": {
         "json": {
-            "username": "john.doe@acryldata.io"
+            "customProperties": {
+                "powerbi_user_id": "john.doe@acryldata.io",
+                "powerbi_principal_type": "User",
+                "powerbi_graph_id": "C9EE53F2-88EA-4711-A173-AF0515A3CD46"
+            },
+            "active": true,
+            "displayName": "John Doe",
+            "email": "john.doe@acryldata.io",
+            "system": false
         }
     },
     "systemMetadata": {

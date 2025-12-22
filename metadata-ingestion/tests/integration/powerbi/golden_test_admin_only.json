@@ -1226,10 +1226,18 @@
     "entityType": "corpuser",
     "entityUrn": "urn:li:corpuser:User1@foo.com",
     "changeType": "UPSERT",
-    "aspectName": "corpUserKey",
+    "aspectName": "corpUserInfo",
     "aspect": {
         "json": {
-            "username": "User1@foo.com"
+            "customProperties": {
+                "powerbi_user_id": "User1@foo.com",
+                "powerbi_principal_type": "User",
+                "powerbi_graph_id": "C9EE53F2-88EA-4711-A173-AF0515A3CD46"
+            },
+            "active": true,
+            "displayName": "user1",
+            "email": "User1@foo.com",
+            "system": false
         }
     },
     "systemMetadata": {
@@ -1242,10 +1250,18 @@
     "entityType": "corpuser",
     "entityUrn": "urn:li:corpuser:User2@foo.com",
     "changeType": "UPSERT",
-    "aspectName": "corpUserKey",
+    "aspectName": "corpUserInfo",
     "aspect": {
         "json": {
-            "username": "User2@foo.com"
+            "customProperties": {
+                "powerbi_user_id": "User2@foo.com",
+                "powerbi_principal_type": "User",
+                "powerbi_graph_id": "C9EE53F2-88EA-4711-A173-AF0515A5REWS"
+            },
+            "active": true,
+            "displayName": "user2",
+            "email": "User2@foo.com",
+            "system": false
         }
     },
     "systemMetadata": {
@@ -2471,10 +2487,18 @@
     "entityType": "corpuser",
     "entityUrn": "urn:li:corpuser:User1@foo.com",
     "changeType": "UPSERT",
-    "aspectName": "corpUserKey",
+    "aspectName": "corpUserInfo",
     "aspect": {
         "json": {
-            "username": "User1@foo.com"
+            "customProperties": {
+                "powerbi_user_id": "User1@foo.com",
+                "powerbi_principal_type": "User",
+                "powerbi_graph_id": "C9EE53F2-88EA-4711-A173-AF0515A3CD46"
+            },
+            "active": true,
+            "displayName": "user1",
+            "email": "User1@foo.com",
+            "system": false
         }
     },
     "systemMetadata": {
@@ -2487,10 +2511,18 @@
     "entityType": "corpuser",
     "entityUrn": "urn:li:corpuser:User2@foo.com",
     "changeType": "UPSERT",
-    "aspectName": "corpUserKey",
+    "aspectName": "corpUserInfo",
     "aspect": {
         "json": {
-            "username": "User2@foo.com"
+            "customProperties": {
+                "powerbi_user_id": "User2@foo.com",
+                "powerbi_principal_type": "User",
+                "powerbi_graph_id": "C9EE53F2-88EA-4711-A173-AF0515A5REWS"
+            },
+            "active": true,
+            "displayName": "user2",
+            "email": "User2@foo.com",
+            "system": false
         }
     },
     "systemMetadata": {
@@ -2526,13 +2558,6 @@
         "json": [
             {
                 "op": "add",
-                "path": "/datasetEdges/urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.snowflake_native-query-with-join,DEV)",
-                "value": {
-                    "destinationUrn": "urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.snowflake_native-query-with-join,DEV)"
-                }
-            },
-            {
-                "op": "add",
                 "path": "/datasetEdges/urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.public_issue_history,DEV)",
                 "value": {
                     "destinationUrn": "urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.public_issue_history,DEV)"
@@ -2540,9 +2565,16 @@
             },
             {
                 "op": "add",
-                "path": "/datasetEdges/urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.job-history,DEV)",
+                "path": "/datasetEdges/urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.SNOWFLAKE_TESTTABLE,DEV)",
                 "value": {
-                    "destinationUrn": "urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.job-history,DEV)"
+                    "destinationUrn": "urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.SNOWFLAKE_TESTTABLE,DEV)"
+                }
+            },
+            {
+                "op": "add",
+                "path": "/datasetEdges/urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.snowflake_native-query-with-join,DEV)",
+                "value": {
+                    "destinationUrn": "urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.snowflake_native-query-with-join,DEV)"
                 }
             },
             {
@@ -2554,16 +2586,16 @@
             },
             {
                 "op": "add",
-                "path": "/datasetEdges/urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.snowflake_native-query,DEV)",
+                "path": "/datasetEdges/urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.job-history,DEV)",
                 "value": {
-                    "destinationUrn": "urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.snowflake_native-query,DEV)"
+                    "destinationUrn": "urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.job-history,DEV)"
                 }
             },
             {
                 "op": "add",
-                "path": "/datasetEdges/urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.SNOWFLAKE_TESTTABLE,DEV)",
+                "path": "/datasetEdges/urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.snowflake_native-query,DEV)",
                 "value": {
-                    "destinationUrn": "urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.SNOWFLAKE_TESTTABLE,DEV)"
+                    "destinationUrn": "urn:li:dataset:(urn:li:dataPlatform:powerbi,library-dataset.snowflake_native-query,DEV)"
                 }
             },
             {

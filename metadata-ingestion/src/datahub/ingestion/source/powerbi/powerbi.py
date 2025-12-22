@@ -6,7 +6,7 @@
 import functools
 import logging
 from datetime import datetime
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import more_itertools
 
@@ -72,7 +72,7 @@ from datahub.metadata.schema_classes import (
     ChangeTypeClass,
     ChartInfoClass,
     ContainerClass,
-    CorpUserKeyClass,
+    CorpUserInfoClass,
     DashboardInfoClass,
     DashboardKeyClass,
     DatasetFieldProfileClass,
@@ -133,6 +133,7 @@ class Mapper:
         self.__reporter = reporter
         self.__dataplatform_instance_resolver = dataplatform_instance_resolver
         self.workspace_key: Optional[ContainerKey] = None
+        self._user_exists_cache: Dict[str, bool] = {}
 
     @staticmethod
     def urn_to_lowercase(value: str, flag: bool) -> str:
@@ -163,6 +164,63 @@ class Mapper:
             entityUrn=entity_urn,
             aspect=aspect,
         )
+
+    def _check_user_exists(self, user_urn: str) -> bool:
+        """
+        Check if a user already exists in DataHub, with caching.
+
+        Returns False if:
+        - User doesn't exist
+        - Graph is unavailable
+        - API call fails (with warning logged)
+        """
+        if user_urn in self._user_exists_cache:
+            return self._user_exists_cache[user_urn]
+
+        if not self.__ctx.graph:
+            return False  # Handled by caller
+
+        try:
+            result = self.__ctx.graph.get_entities(
+                entity_name="corpuser",
+                urns=[user_urn],
+                aspects=["corpUserInfo"],
+                with_system_metadata=False,
+            )
+            exists = user_urn in result and "corpUserInfo" in result[user_urn]
+            self._user_exists_cache[user_urn] = exists
+            return exists
+        except Exception as e:
+            # Log WARNING - API failure could lead to unintended overwrites
+            logger.warning(
+                f"Could not check if user {user_urn} exists (graph API error): {e}. "
+                f"Proceeding with user creation."
+            )
+            self._user_exists_cache[user_urn] = False
+            return False
+
+    def _should_skip_user(self, user_urn: str) -> bool:
+        """
+        Determine if user creation should be skipped based on config and existence.
+
+        Logic:
+        - overwrite_existing_users=True → Never skip
+        - Graph unavailable → Warn and don't skip (create user)
+        - User exists → Skip
+        - User doesn't exist → Don't skip (create user)
+        """
+        if self.__config.ownership.overwrite_existing_users:
+            return False  # Always create/update
+
+        if not self.__ctx.graph:
+            logger.warning(
+                "overwrite_existing_users=False requires graph access for existence checks. "
+                "Graph unavailable (likely file-based sink) - creating all users. "
+                "Set overwrite_existing_users=True to suppress this warning."
+            )
+            return False  # Proceed with creation
+
+        return self._check_user_exists(user_urn)
 
     def _to_work_unit(
         self, mcp: MetadataChangeProposalWrapper
@@ -854,25 +912,61 @@ class Mapper:
         self, user: powerbi_data_classes.User
     ) -> List[MetadataChangeProposalWrapper]:
         """
-        Map PowerBi user to datahub user
+        Map PowerBI user to DataHub CorpUser with proper CorpUserInfoClass.
+
+        Key behaviors:
+        - Emits CorpUserInfoClass (not CorpUserKeyClass) with full user data
+        - Respects overwrite_existing_users config
+        - Sets active=False for non-human principals (Apps, Service Principals)
+        - Includes PowerBI metadata in customProperties for traceability
         """
+        if not self.__config.ownership.create_corp_user:
+            return []
 
-        logger.debug(f"Mapping user {user.displayName}(id={user.id}) to datahub's user")
+        logger.debug(f"Mapping user {user.displayName}(id={user.id}) to DataHub user")
 
-        # Create an URN for user
+        # Build user URN
         user_id = user.get_urn_part(
             use_email=self.__config.ownership.use_powerbi_email,
             remove_email_suffix=self.__config.ownership.remove_email_suffix,
         )
         user_urn = builder.make_user_urn(user_id)
-        user_key = CorpUserKeyClass(username=user.id)
 
-        user_key_mcp = self.new_mcp(
-            entity_urn=user_urn,
-            aspect=user_key,
+        # Check if we should skip this user
+        if self._should_skip_user(user_urn):
+            logger.debug(
+                f"Skipping user {user_urn} - already exists (overwrite_existing_users=False)"
+            )
+            return []
+
+        # Log at DEBUG level for data quality monitoring (INFO is too noisy)
+        if not user.emailAddress:
+            logger.debug(f"PowerBI user {user.displayName} ({user.id}) has no email")
+        if not user.displayName:
+            logger.debug(f"PowerBI user {user.id} has no displayName")
+
+        # Build customProperties (must be Dict[str, str] - no None values)
+        custom_props: Dict[str, str] = {
+            "powerbi_user_id": user.id,
+            "powerbi_principal_type": user.principalType,
+        }
+        if user.graphId:
+            custom_props["powerbi_graph_id"] = user.graphId
+
+        # Create CorpUserInfoClass with full PowerBI data
+        user_info = CorpUserInfoClass(
+            active=(user.principalType == "User"),
+            displayName=user.displayName or user.id,
+            email=user.emailAddress if user.emailAddress else None,
+            customProperties=custom_props,
         )
 
-        return [user_key_mcp]
+        user_info_mcp = self.new_mcp(
+            entity_urn=user_urn,
+            aspect=user_info,
+        )
+
+        return [user_info_mcp]
 
     def to_datahub_users(
         self, users: List[powerbi_data_classes.User]

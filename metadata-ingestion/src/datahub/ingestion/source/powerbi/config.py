@@ -263,7 +263,22 @@ class DataBricksPlatformDetail(PlatformDetail):
 
 class OwnershipMapping(ConfigModel):
     create_corp_user: bool = pydantic.Field(
-        default=True, description="Whether ingest PowerBI user as Datahub Corpuser"
+        default=True,
+        description=(
+            "Whether to create PowerBI users as DataHub CorpUsers. "
+            "When enabled, users are created with displayName, email, and active status from PowerBI. "
+            "Set to False if users are managed exclusively by LDAP/SCIM/Okta."
+        ),
+    )
+    overwrite_existing_users: bool = pydantic.Field(
+        default=False,
+        description=(
+            "Whether to overwrite existing users during ingestion. "
+            "When False (default), existing users are skipped to prevent overwriting "
+            "data from authoritative sources like LDAP/SCIM/Okta. "
+            "Set to True only if PowerBI is your authoritative source for user data. "
+            "Note: Requires DataHub graph access; file-based sinks will create users with a warning."
+        ),
     )
     use_powerbi_email: bool = pydantic.Field(
         # TODO: Deprecate and remove this config, since the non-email format
@@ -283,6 +298,16 @@ class OwnershipMapping(ConfigModel):
         default=None,
         description="Need to have certain authority to qualify as owner for example ['ReadWriteReshareExplore','Owner','Admin']",
     )
+
+    @model_validator(mode="after")
+    def validate_overwrite_requires_create(self) -> "OwnershipMapping":
+        """overwrite_existing_users requires create_corp_user=True"""
+        if self.overwrite_existing_users and not self.create_corp_user:
+            raise ValueError(
+                "overwrite_existing_users=True requires create_corp_user=True. "
+                "Cannot overwrite users if user creation is disabled."
+            )
+        return self
 
 
 class PowerBiProfilingConfig(ConfigModel):

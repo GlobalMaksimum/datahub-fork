@@ -174,3 +174,64 @@ If you have added service principal as `member` in workspace then PowerBI Source
 - Reports
 - Dashboard's Tiles
 - Report's Pages
+
+## User Ownership Configuration
+
+By default, PowerBI ingestion creates users **but does not overwrite existing users**.
+This prevents accidentally overwriting user information from authoritative sources (LDAP/SCIM/Okta).
+
+### Configuration
+
+```yaml
+source:
+  type: powerbi
+  config:
+    ownership:
+      create_corp_user: true           # Create users (default: true)
+      overwrite_existing_users: false  # Protect existing users (default: false)
+      use_powerbi_email: true          # Use email for user URN (default: true)
+```
+
+### Behavior Matrix
+
+| `create_corp_user` | `overwrite_existing_users` | New Users | Existing Users |
+|--------------------|---------------------------|-----------|----------------|
+| `false` | N/A | Not created | Not updated |
+| `true` | `false` (default) | Created with PowerBI data | **Skipped** (preserved) |
+| `true` | `true` | Created with PowerBI data | **Overwritten** with PowerBI data |
+
+### Traceability
+
+PowerBI user metadata is stored in `customProperties`:
+- `powerbi_user_id`: Original PowerBI user ID
+- `powerbi_graph_id`: Microsoft Graph ID (if available)
+- `powerbi_principal_type`: Principal type (User, App, Group, etc.)
+
+### Known Limitations (V1)
+
+When `overwrite_existing_users=false` (default):
+
+- **Existing users are never updated**, even if PowerBI has newer/better data
+- **Example:** If a user exists with `email=null` but PowerBI has an email, it won't be populated
+- **Workaround:** Temporarily set `overwrite_existing_users=true` for one ingestion run to refresh all users
+
+**If PowerBI is your authoritative source for user data**, set `overwrite_existing_users=true`.
+
+### URN Configuration
+
+The user URN format is controlled by these options:
+
+| `use_powerbi_email` | `remove_email_suffix` | URN Format |
+|---------------------|----------------------|------------|
+| `true` (default) | `false` (default) | `urn:li:corpuser:john.doe@company.com` |
+| `true` | `true` | `urn:li:corpuser:john.doe` |
+| `false` | N/A | `urn:li:corpuser:users.{powerbi_user_id}` |
+
+### Notes
+
+- If graph access is unavailable (e.g., file-based sink), `overwrite_existing_users=false` cannot
+  check for existing users. A warning is logged and users are created.
+- Non-human principals (Apps, Service Principals, Groups) are marked as `active=false`
+- Invalid config combinations (e.g., `create_corp_user=false` + `overwrite_existing_users=true`)
+  will raise a validation error
+- User existence checks are cached per ingestion run for performance

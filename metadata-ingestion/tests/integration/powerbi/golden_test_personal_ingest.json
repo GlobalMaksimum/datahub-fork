@@ -94,26 +94,18 @@
     "entityType": "corpuser",
     "entityUrn": "urn:li:corpuser:User1@foo.com",
     "changeType": "UPSERT",
-    "aspectName": "corpUserKey",
+    "aspectName": "corpUserInfo",
     "aspect": {
         "json": {
-            "username": "User1@foo.com"
-        }
-    },
-    "systemMetadata": {
-        "lastObserved": 1643871600000,
-        "runId": "powerbi-test",
-        "lastRunId": "no-run-id-provided"
-    }
-},
-{
-    "entityType": "corpuser",
-    "entityUrn": "urn:li:corpuser:User2@foo.com",
-    "changeType": "UPSERT",
-    "aspectName": "corpUserKey",
-    "aspect": {
-        "json": {
-            "username": "User2@foo.com"
+            "customProperties": {
+                "powerbi_user_id": "User1@foo.com",
+                "powerbi_principal_type": "User",
+                "powerbi_graph_id": "C9EE53F2-88EA-4711-A173-AF0515A3CD46"
+            },
+            "active": true,
+            "displayName": "user1",
+            "email": "User1@foo.com",
+            "system": false
         }
     },
     "systemMetadata": {
@@ -130,6 +122,30 @@
     "aspect": {
         "json": {
             "path": []
+        }
+    },
+    "systemMetadata": {
+        "lastObserved": 1643871600000,
+        "runId": "powerbi-test",
+        "lastRunId": "no-run-id-provided"
+    }
+},
+{
+    "entityType": "corpuser",
+    "entityUrn": "urn:li:corpuser:User2@foo.com",
+    "changeType": "UPSERT",
+    "aspectName": "corpUserInfo",
+    "aspect": {
+        "json": {
+            "customProperties": {
+                "powerbi_user_id": "User2@foo.com",
+                "powerbi_principal_type": "User",
+                "powerbi_graph_id": "C9EE53F2-88EA-4711-A173-AF0515A5REWS"
+            },
+            "active": true,
+            "displayName": "user2",
+            "email": "User2@foo.com",
+            "system": false
         }
     },
     "systemMetadata": {
