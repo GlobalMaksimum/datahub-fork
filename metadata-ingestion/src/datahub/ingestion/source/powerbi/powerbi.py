@@ -137,6 +137,8 @@ class Mapper:
         # to ensure fresh existence checks each ingestion. This avoids stale cache issues
         # while still preventing redundant API calls within a single run.
         self._user_exists_cache: Dict[str, bool] = {}
+        # Track user URNs that should be skipped for entity creation (but still used for ownership)
+        self._skipped_user_urns: set = set()
 
     @staticmethod
     def urn_to_lowercase(value: str, flag: bool) -> str:
@@ -226,7 +228,7 @@ class Mapper:
         return self._check_user_exists(user_urn)
 
     def _to_work_unit(
-        self, mcp: MetadataChangeProposalWrapper
+        self, mcp: MetadataChangeProposalWrapper, is_primary_source: bool = True
     ) -> EquableMetadataWorkUnit:
         return Mapper.EquableMetadataWorkUnit(
             id="{PLATFORM}-{ENTITY_URN}-{ASPECT_NAME}".format(
@@ -235,6 +237,7 @@ class Mapper:
                 ASPECT_NAME=mcp.aspectName,
             ),
             mcp=mcp,
+            is_primary_source=is_primary_source,
         )
 
     def extract_dataset_schema(
@@ -919,13 +922,13 @@ class Mapper:
 
         Key behaviors:
         - Emits CorpUserInfoClass (not CorpUserKeyClass) with full user data
-        - Respects overwrite_existing_users config
+        - Respects overwrite_existing_users config (when create_corp_user=True)
         - Sets active=False for non-human principals (Apps, Service Principals)
         - Includes PowerBI metadata in customProperties for traceability
-        """
-        if not self.__config.ownership.create_corp_user:
-            return []
 
+        Note: Always generates MCPs for URN extraction (ownership needs URNs).
+        The create_corp_user filtering happens at the output stage.
+        """
         logger.debug(f"Mapping user {user.displayName}(id={user.id}) to DataHub user")
 
         # Build user URN
@@ -935,12 +938,16 @@ class Mapper:
         )
         user_urn = builder.make_user_urn(user_id)
 
-        # Check if we should skip this user
-        if self._should_skip_user(user_urn):
+        # Check if we should skip this user's entity creation (only when create_corp_user=True)
+        # We still generate MCPs for ownership URN extraction - filtering happens at output
+        if self.__config.ownership.create_corp_user and self._should_skip_user(
+            user_urn
+        ):
             logger.debug(
-                f"Skipping user {user_urn} - already exists (overwrite_existing_users=False)"
+                f"Skipping user entity creation for {user_urn} - already exists "
+                f"(overwrite_existing_users=False). URN still used for ownership."
             )
-            return []
+            self._skipped_user_urns.add(user_urn)
 
         # Log at DEBUG level for data quality monitoring (INFO is too noisy)
         if not user.emailAddress:
@@ -1075,12 +1082,26 @@ class Mapper:
         # Now add MCPs in sequence
         mcps.extend(ds_mcps)
         if self.__config.ownership.create_corp_user:
-            mcps.extend(user_mcps)
+            # Filter out users that should be skipped (already exist)
+            mcps.extend(
+                [m for m in user_mcps if m.entityUrn not in self._skipped_user_urns]
+            )
         mcps.extend(chart_mcps)
         mcps.extend(dashboard_mcps)
 
         # Convert MCP to work_units
-        work_units = map(self._to_work_unit, mcps)
+        work_units: List[Mapper.EquableMetadataWorkUnit] = list(
+            map(self._to_work_unit, mcps)
+        )
+
+        # Emit non-primary work units for skipped users to prevent stateful ingestion
+        # from soft-deleting them. This ensures users that exist (and are preserved
+        # due to overwrite_existing_users=False) are not accidentally removed.
+        if self.__config.ownership.create_corp_user:
+            for mcp in user_mcps:
+                if mcp.entityUrn in self._skipped_user_urns:
+                    work_units.append(self._to_work_unit(mcp, is_primary_source=False))
+
         # Return set of work_unit
         return deduplicate_list([wu for wu in work_units if wu is not None])
 
@@ -1314,11 +1335,27 @@ class Mapper:
         # Now add MCPs in sequence
         mcps.extend(ds_mcps)
         if self.__config.ownership.create_corp_user:
-            mcps.extend(user_mcps)
+            # Filter out users that should be skipped (already exist)
+            mcps.extend(
+                [m for m in user_mcps if m.entityUrn not in self._skipped_user_urns]
+            )
         mcps.extend(chart_mcps)
         mcps.extend(report_mcps)
 
-        return map(self._to_work_unit, mcps)
+        # Convert MCP to work_units
+        work_units: List[Mapper.EquableMetadataWorkUnit] = list(
+            map(self._to_work_unit, mcps)
+        )
+
+        # Emit non-primary work units for skipped users to prevent stateful ingestion
+        # from soft-deleting them. This ensures users that exist (and are preserved
+        # due to overwrite_existing_users=False) are not accidentally removed.
+        if self.__config.ownership.create_corp_user:
+            for mcp in user_mcps:
+                if mcp.entityUrn in self._skipped_user_urns:
+                    work_units.append(self._to_work_unit(mcp, is_primary_source=False))
+
+        return work_units
 
 
 @platform_name("PowerBI")

@@ -164,7 +164,7 @@ class TestSkipOverwriteLogic:
         mock_dataplatform_resolver,
         sample_user,
     ):
-        """User exists + overwrite=False → skip (return empty list)."""
+        """User exists + overwrite=False → MCPs generated but URN tracked for filtering."""
         # User exists
         mock_pipeline_context.graph.get_entities.return_value = {
             "urn:li:corpuser:john.doe@company.com": {
@@ -182,7 +182,10 @@ class TestSkipOverwriteLogic:
 
         mcps = mapper.to_datahub_user(sample_user)
 
-        assert len(mcps) == 0  # Skipped
+        # MCPs are now generated for URN extraction (ownership needs URNs)
+        # Filtering happens at output stage via _skipped_user_urns
+        assert len(mcps) == 1
+        assert mcps[0].entityUrn in mapper._skipped_user_urns
 
     def test_creates_new_user_when_overwrite_false(
         self,
@@ -494,7 +497,7 @@ class TestConfigValidation:
 class TestCreateCorpUserDisabled:
     """Tests for when create_corp_user is disabled."""
 
-    def test_returns_empty_when_create_corp_user_false(
+    def test_generates_mcps_when_create_corp_user_false(
         self,
         mock_pipeline_context,
         mock_config,
@@ -502,7 +505,12 @@ class TestCreateCorpUserDisabled:
         mock_dataplatform_resolver,
         sample_user,
     ):
-        """create_corp_user=False → returns empty list."""
+        """create_corp_user=False → MCPs still generated for URN extraction.
+
+        The filtering happens at the output stage (to_datahub_work_units),
+        not in to_datahub_user(). This ensures ownership aspects can still
+        reference user URNs even when not creating user entities.
+        """
         mock_config.ownership.create_corp_user = False
 
         mapper = Mapper(
@@ -514,7 +522,9 @@ class TestCreateCorpUserDisabled:
 
         mcps = mapper.to_datahub_user(sample_user)
 
-        assert len(mcps) == 0
+        # MCPs are generated for URN extraction - filtering happens at output stage
+        assert len(mcps) == 1
+        assert isinstance(mcps[0].aspect, CorpUserInfoClass)
 
 
 class TestUrnConfiguration:
@@ -1069,7 +1079,7 @@ class TestToDatahubUserCoverage:
         mock_dataplatform_resolver,
         sample_user,
     ):
-        """Skipping existing user should log debug message."""
+        """Skipping existing user should log debug message and track URN."""
         mock_config.ownership.overwrite_existing_users = False
         mock_pipeline_context.graph.get_entities.return_value = {
             "urn:li:corpuser:john.doe@company.com": {
@@ -1087,10 +1097,14 @@ class TestToDatahubUserCoverage:
         with patch("datahub.ingestion.source.powerbi.powerbi.logger") as mock_logger:
             mcps = mapper.to_datahub_user(sample_user)
 
-            assert len(mcps) == 0
+            # MCPs are generated but URN is tracked for filtering at output stage
+            assert len(mcps) == 1
+            assert mcps[0].entityUrn in mapper._skipped_user_urns
             # Verify debug was called with skip message
             debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
-            assert any("Skipping user" in str(call) for call in debug_calls)
+            assert any(
+                "Skipping user entity creation" in str(call) for call in debug_calls
+            )
 
     def test_to_datahub_user_logs_debug_for_missing_email(
         self,
@@ -1149,3 +1163,69 @@ class TestToDatahubUserCoverage:
             # Verify debug was called about missing displayName
             debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
             assert any("has no displayName" in str(call) for call in debug_calls)
+
+
+class TestStatefulIngestionCompatibility:
+    """Tests for stateful ingestion compatibility with skipped users."""
+
+    def test_to_work_unit_supports_is_primary_source(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+        sample_user,
+    ):
+        """Verify _to_work_unit accepts is_primary_source parameter."""
+        mock_pipeline_context.graph.get_entities.return_value = {}
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        mcps = mapper.to_datahub_user(sample_user)
+        assert len(mcps) == 1
+
+        # Create work unit with is_primary_source=True (default)
+        wu_primary = mapper._to_work_unit(mcps[0])
+        assert wu_primary.is_primary_source is True
+
+        # Create work unit with is_primary_source=False
+        wu_non_primary = mapper._to_work_unit(mcps[0], is_primary_source=False)
+        assert wu_non_primary.is_primary_source is False
+
+    def test_skipped_user_urns_tracked_for_non_primary_emission(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+        sample_user,
+    ):
+        """Skipped users should be tracked in _skipped_user_urns for non-primary work unit emission."""
+        # User exists
+        mock_pipeline_context.graph.get_entities.return_value = {
+            "urn:li:corpuser:john.doe@company.com": {
+                "corpUserInfo": (MagicMock(spec=CorpUserInfoClass), None)
+            }
+        }
+        mock_config.ownership.overwrite_existing_users = False
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        mcps = mapper.to_datahub_user(sample_user)
+
+        # MCPs are generated for URN extraction
+        assert len(mcps) == 1
+        # User URN should be tracked in _skipped_user_urns
+        assert mcps[0].entityUrn in mapper._skipped_user_urns
+        # This allows the work unit generation logic to emit non-primary work units
+        # for these URNs, preventing stateful ingestion from soft-deleting them
