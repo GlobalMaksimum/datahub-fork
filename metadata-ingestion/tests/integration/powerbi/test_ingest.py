@@ -117,6 +117,7 @@ def test_mysql_ingest(
                     "extract_app": True,
                     "extract_column_level_lineage": True,
                     "workspace_name_pattern": {"allow": ["^Employees$"]},
+                    "ownership": {"overwrite_existing_users": True},
                 },
             },
             "sink": {
@@ -174,6 +175,7 @@ def test_mysql_odbc_datasource_ingest(
                     "extract_app": True,
                     "extract_column_level_lineage": True,
                     "workspace_name_pattern": {"allow": ["^Employees$"]},
+                    "ownership": {"overwrite_existing_users": True},
                 },
             },
             "sink": {

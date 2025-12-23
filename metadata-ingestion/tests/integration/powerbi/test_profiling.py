@@ -301,6 +301,7 @@ def default_source_config():
             "enabled": True,
         },
         "profile_pattern": {"allow": [".*"]},
+        "ownership": {"overwrite_existing_users": True},
     }
 
 
