@@ -261,10 +261,12 @@ The user URN format is controlled by these options:
 
 ### Troubleshooting
 
-**Warning: "Graph unavailable - creating all users"**
+**Error: "overwrite_existing_users=False requires DataHub graph access"**
 
-This warning appears when `overwrite_existing_users=false` but the ingestion pipeline doesn't
-have graph access (typically file-based sinks). Solutions:
+This error occurs when `overwrite_existing_users=false` but the ingestion pipeline doesn't
+have graph access (typically file-based sinks without `datahub_api` config). The ingestion
+will fail because it cannot check if users exist, which would violate the intent of
+`overwrite_existing_users=false`. Solutions:
 
 - Use the DataHub REST sink instead of file-based output
 - Add `datahub_api` config to provide graph access with file-based sinks:
@@ -273,7 +275,7 @@ have graph access (typically file-based sinks). Solutions:
     server: "http://localhost:8080"
     # token: "..." # if authentication is required
   ```
-- Set `overwrite_existing_users=true` to suppress the warning (users will be created/updated)
+- Set `overwrite_existing_users=true` if you want to always create/update users
 - Set `create_corp_user=false` if you don't need user creation at all
 
 **Users not being updated with new PowerBI data**

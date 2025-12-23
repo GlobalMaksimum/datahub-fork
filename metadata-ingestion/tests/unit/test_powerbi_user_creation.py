@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from datahub.configuration.common import ConfigurationError
 from datahub.ingestion.api.common import PipelineContext
 from datahub.ingestion.source.powerbi.config import (
     OwnershipMapping,
@@ -244,7 +245,7 @@ class TestSkipOverwriteLogic:
 class TestEdgeCases:
     """Tests for edge cases and special scenarios."""
 
-    def test_warns_on_file_based_ingestion_no_graph(
+    def test_raises_error_on_file_based_ingestion_no_graph(
         self,
         mock_pipeline_context_no_graph,
         mock_config,
@@ -252,8 +253,9 @@ class TestEdgeCases:
         mock_dataplatform_resolver,
         sample_user,
     ):
-        """Graph=None + overwrite=False → warn and create."""
+        """Graph=None + overwrite=False → raise ConfigurationError."""
         mock_config.ownership.overwrite_existing_users = False
+        mock_config.ownership.create_corp_user = True
 
         mapper = Mapper(
             ctx=mock_pipeline_context_no_graph,
@@ -262,18 +264,14 @@ class TestEdgeCases:
             dataplatform_instance_resolver=mock_dataplatform_resolver,
         )
 
-        with patch("datahub.ingestion.source.powerbi.powerbi.logger") as mock_logger:
-            mcps = mapper.to_datahub_user(sample_user)
+        with pytest.raises(ConfigurationError) as exc_info:
+            mapper.to_datahub_user(sample_user)
 
-            # Should create user despite no graph access
-            assert len(mcps) == 1
-            assert isinstance(mcps[0].aspect, CorpUserInfoClass)
-
-            # Should log warning
-            mock_logger.warning.assert_called()
-            warning_call = mock_logger.warning.call_args[0][0]
-            assert "overwrite_existing_users=False" in warning_call
-            assert "Graph unavailable" in warning_call
+        # Verify error message contains helpful information
+        error_msg = str(exc_info.value)
+        assert "overwrite_existing_users=False" in error_msg
+        assert "graph access" in error_msg.lower()
+        assert "datahub_api" in error_msg
 
     def test_non_human_principal_marked_inactive(
         self,
@@ -1017,14 +1015,14 @@ class TestShouldSkipUserCoverage:
         # API should NOT be called when overwrite=True
         mock_pipeline_context.graph.get_entities.assert_not_called()
 
-    def test_should_skip_user_no_graph_warns_and_returns_false(
+    def test_should_skip_user_no_graph_raises_configuration_error(
         self,
         mock_pipeline_context_no_graph,
         mock_config,
         mock_reporter,
         mock_dataplatform_resolver,
     ):
-        """No graph + overwrite=False should warn and return False."""
+        """No graph + overwrite=False should raise ConfigurationError."""
         mock_config.ownership.overwrite_existing_users = False
 
         mapper = Mapper(
@@ -1034,14 +1032,13 @@ class TestShouldSkipUserCoverage:
             dataplatform_instance_resolver=mock_dataplatform_resolver,
         )
 
-        with patch("datahub.ingestion.source.powerbi.powerbi.logger") as mock_logger:
-            result = mapper._should_skip_user("urn:li:corpuser:any_user")
+        with pytest.raises(ConfigurationError) as exc_info:
+            mapper._should_skip_user("urn:li:corpuser:any_user")
 
-            assert result is False
-            mock_logger.warning.assert_called_once()
-            warning_msg = mock_logger.warning.call_args[0][0]
-            assert "overwrite_existing_users=False" in warning_msg
-            assert "Graph unavailable" in warning_msg
+        error_msg = str(exc_info.value)
+        assert "overwrite_existing_users=False" in error_msg
+        assert "graph access" in error_msg.lower()
+        assert "datahub_api" in error_msg
 
     def test_should_skip_user_existing_user_returns_true(
         self,

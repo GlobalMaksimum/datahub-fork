@@ -13,6 +13,7 @@ import more_itertools
 import datahub.emitter.mce_builder as builder
 import datahub.ingestion.source.powerbi.m_query.data_classes
 import datahub.ingestion.source.powerbi.rest_api_wrapper.data_classes as powerbi_data_classes
+from datahub.configuration.common import ConfigurationError
 from datahub.emitter.mcp import MetadataChangeProposalWrapper
 from datahub.emitter.mcp_builder import ContainerKey, gen_containers
 from datahub.ingestion.api.common import PipelineContext
@@ -210,7 +211,7 @@ class Mapper:
 
         Logic:
         - overwrite_existing_users=True → Never skip
-        - Graph unavailable → Warn and don't skip (create user)
+        - Graph unavailable → Raise ConfigurationError (cannot honor user's intent)
         - User exists → Skip
         - User doesn't exist → Don't skip (create user)
         """
@@ -218,12 +219,13 @@ class Mapper:
             return False  # Always create/update
 
         if not self.__ctx.graph:
-            logger.warning(
-                "overwrite_existing_users=False requires graph access for existence checks. "
-                "Graph unavailable (likely file-based sink) - creating all users. "
-                "Set overwrite_existing_users=True to suppress this warning."
+            raise ConfigurationError(
+                "overwrite_existing_users=False requires DataHub graph access to check user existence. "
+                "Graph is unavailable (likely using a file-based sink without datahub_api config). "
+                "Solutions: (1) Add datahub_api config at pipeline level to provide graph access, "
+                "(2) Set overwrite_existing_users=True to always create/update users, or "
+                "(3) Set create_corp_user=False to disable user creation entirely."
             )
-            return False  # Proceed with creation
 
         return self._check_user_exists(user_urn)
 
