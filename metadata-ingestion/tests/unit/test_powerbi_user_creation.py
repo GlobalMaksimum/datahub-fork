@@ -425,6 +425,130 @@ class TestCaching:
         # get_entities should only be called once due to caching
         assert mock_pipeline_context.graph.get_entities.call_count == 1
 
+    def test_batch_check_prepopulates_cache(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """_batch_check_users_exist makes single API call for multiple users."""
+        # Simulate that user1 exists, user2 doesn't
+        mock_pipeline_context.graph.get_entities.return_value = {
+            "urn:li:corpuser:user1": {"corpUserInfo": (MagicMock(), None)},
+        }
+        mock_config.ownership = OwnershipMapping(overwrite_existing_users=False)
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        # Batch check multiple users
+        urns = [
+            "urn:li:corpuser:user1",
+            "urn:li:corpuser:user2",
+            "urn:li:corpuser:user3",
+        ]
+        mapper._batch_check_users_exist(urns)
+
+        # Should be only 1 batch API call (not 3 individual calls)
+        assert mock_pipeline_context.graph.get_entities.call_count == 1
+
+        # Cache should be populated for all users
+        assert mapper._check_user_exists("urn:li:corpuser:user1") is True
+        assert mapper._check_user_exists("urn:li:corpuser:user2") is False
+        assert mapper._check_user_exists("urn:li:corpuser:user3") is False
+
+        # No additional API calls (cache hit)
+        assert mock_pipeline_context.graph.get_entities.call_count == 1
+
+    def test_batch_check_splits_large_user_sets(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """Large user sets are split into batches to avoid API limits."""
+        mock_pipeline_context.graph.get_entities.return_value = {}
+        mock_config.ownership = OwnershipMapping(overwrite_existing_users=False)
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        # Create 5 users, use batch_size=2 to test batching
+        urns = [f"urn:li:corpuser:user{i}" for i in range(5)]
+        mapper._batch_check_users_exist(urns, batch_size=2)
+
+        # Should make 3 batch calls: [user0, user1], [user2, user3], [user4]
+        assert mock_pipeline_context.graph.get_entities.call_count == 3
+
+        # All users should be cached
+        for urn in urns:
+            assert urn in mapper._user_exists_cache
+
+    def test_to_datahub_users_uses_batch_check(
+        self,
+        mock_pipeline_context,
+        mock_config,
+        mock_reporter,
+        mock_dataplatform_resolver,
+    ):
+        """to_datahub_users pre-populates cache with batch API call."""
+        users = [
+            User(
+                id="user1",
+                displayName="User One",
+                emailAddress="user1@company.com",
+                graphId="graph-1",
+                principalType="User",
+            ),
+            User(
+                id="user2",
+                displayName="User Two",
+                emailAddress="user2@company.com",
+                graphId="graph-2",
+                principalType="User",
+            ),
+            User(
+                id="user3",
+                displayName="User Three",
+                emailAddress="user3@company.com",
+                graphId="graph-3",
+                principalType="User",
+            ),
+        ]
+        # user1 exists, user2 and user3 don't
+        mock_pipeline_context.graph.get_entities.return_value = {
+            "urn:li:corpuser:user1@company.com": {"corpUserInfo": (MagicMock(), None)},
+        }
+        mock_config.ownership = OwnershipMapping(overwrite_existing_users=False)
+
+        mapper = Mapper(
+            ctx=mock_pipeline_context,
+            config=mock_config,
+            reporter=mock_reporter,
+            dataplatform_instance_resolver=mock_dataplatform_resolver,
+        )
+
+        mcps = mapper.to_datahub_users(users)
+
+        # Should be 1 batch call (for pre-population) + no additional individual calls
+        # The batch call checks all 3 users at once
+        assert mock_pipeline_context.graph.get_entities.call_count == 1
+
+        # All 3 users get MCPs (even skipped ones are returned for ownership URN extraction)
+        # but user1 should be tracked as skipped
+        assert len(mcps) == 3
+        assert "urn:li:corpuser:user1@company.com" in mapper._skipped_user_urns
+
 
 class TestErrorHandling:
     """Tests for error handling scenarios."""

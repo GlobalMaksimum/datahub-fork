@@ -171,6 +171,40 @@ class Mapper:
             aspect=aspect,
         )
 
+    def _batch_check_users_exist(
+        self, user_urns: List[str], batch_size: int = 1000
+    ) -> None:
+        """Batch check if users exist in DataHub and pre-populate the cache."""
+        if not self.__ctx.graph or not user_urns:
+            return
+
+        uncached_urns = [urn for urn in user_urns if urn not in self._user_exists_cache]
+        if not uncached_urns:
+            return
+
+        logger.debug(
+            f"Batch checking existence of {len(uncached_urns)} users "
+            f"in {(len(uncached_urns) + batch_size - 1) // batch_size} batches"
+        )
+
+        for i in range(0, len(uncached_urns), batch_size):
+            batch = uncached_urns[i : i + batch_size]
+            try:
+                result = self.__ctx.graph.get_entities(
+                    entity_name="corpuser",
+                    urns=batch,
+                    aspects=["corpUserInfo"],
+                    with_system_metadata=False,
+                )
+                for urn in batch:
+                    exists = urn in result and "corpUserInfo" in result[urn]
+                    self._user_exists_cache[urn] = exists
+            except Exception as e:
+                logger.warning(
+                    f"Batch user existence check failed: {e}. "
+                    f"Will check users individually."
+                )
+
     def _check_user_exists(self, user_urn: str) -> bool:
         """
         Check if a user already exists in DataHub, with caching.
@@ -179,6 +213,9 @@ class Mapper:
         - User doesn't exist
         - Graph is unavailable
         - API call fails (with warning logged)
+
+        Note: For better performance, call _batch_check_users_exist() first
+        to pre-populate the cache for multiple users.
         """
         if user_urn in self._user_exists_cache:
             return self._user_exists_cache[user_urn]
@@ -976,30 +1013,57 @@ class Mapper:
 
         return [user_info_mcp]
 
+    def _get_users_to_process(
+        self, users: List[powerbi_data_classes.User]
+    ) -> List[powerbi_data_classes.User]:
+        """Filter users based on owner_criteria and return users to process."""
+        users_to_process = []
+        for user in users:
+            if not user:
+                continue
+            user_rights = [
+                user.datasetUserAccessRight,
+                user.reportUserAccessRight,
+                user.dashboardUserAccessRight,
+                user.groupUserAccessRight,
+            ]
+            if (
+                user.principalType == "User"
+                and self.__config.ownership.owner_criteria
+                and len(set(user_rights) & set(self.__config.ownership.owner_criteria))
+                > 0
+            ) or self.__config.ownership.owner_criteria is None:
+                users_to_process.append(user)
+        return users_to_process
+
     def to_datahub_users(
         self, users: List[powerbi_data_classes.User]
     ) -> List[MetadataChangeProposalWrapper]:
-        user_mcps = []
+        # Filter users first
+        users_to_process = self._get_users_to_process(users)
 
-        for user in users:
-            if user:
-                user_rights = [
-                    user.datasetUserAccessRight,
-                    user.reportUserAccessRight,
-                    user.dashboardUserAccessRight,
-                    user.groupUserAccessRight,
-                ]
-                if (
-                    user.principalType == "User"
-                    and self.__config.ownership.owner_criteria
-                    and len(
-                        set(user_rights) & set(self.__config.ownership.owner_criteria)
+        # Pre-populate user existence cache in batch (performance optimization)
+        # Only needed when overwrite_existing_users=False and create_corp_user=True
+        if (
+            self.__config.ownership.create_corp_user
+            and not self.__config.ownership.overwrite_existing_users
+            and self.__ctx.graph
+        ):
+            user_urns = [
+                builder.make_user_urn(
+                    user.get_urn_part(
+                        use_email=self.__config.ownership.use_powerbi_email,
+                        remove_email_suffix=self.__config.ownership.remove_email_suffix,
                     )
-                    > 0
-                ) or self.__config.ownership.owner_criteria is None:
-                    user_mcps.extend(self.to_datahub_user(user))
-                else:
-                    continue
+                )
+                for user in users_to_process
+            ]
+            self._batch_check_users_exist(user_urns)
+
+        # Process each user
+        user_mcps = []
+        for user in users_to_process:
+            user_mcps.extend(self.to_datahub_user(user))
 
         return user_mcps
 
