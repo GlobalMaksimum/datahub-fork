@@ -208,6 +208,15 @@ PowerBI user metadata is stored in `customProperties`:
 - `powerbi_graph_id`: Microsoft Graph ID (if available)
 - `powerbi_principal_type`: Principal type (User, App, Group, etc.)
 
+### Stateful Ingestion Compatibility
+
+This feature is fully compatible with stateful ingestion. When `overwrite_existing_users=false`:
+
+- **Skipped users are NOT soft-deleted** - Even though user MCPs are not emitted for existing users,
+  their URNs are still tracked to prevent stateful ingestion from removing them
+- **Safe to toggle** - You can safely switch `overwrite_existing_users` between `true` and `false`
+  across runs without losing users
+
 ### Known Limitations (V1)
 
 When `overwrite_existing_users=false` (default):
@@ -241,8 +250,9 @@ The user URN format is controlled by these options:
 ### Notes
 
 - **Graph access requirement:** `overwrite_existing_users=false` requires DataHub graph access to
-  check if users exist. This works automatically when using the DataHub REST sink. File-based sinks
-  (e.g., writing to JSON files) don't have graph access.
+  check if users exist. This is automatically available when using the DataHub REST sink. For file-based
+  sinks, add the `datahub_api` config at the pipeline level (same level as `source`/`sink`) to
+  automatically enable graph access.
 - Non-human principals (Apps, Service Principals, Groups) are marked as `active=false`
 - Invalid config combinations (e.g., `create_corp_user=false` + `overwrite_existing_users=true`)
   will raise a validation error
@@ -257,6 +267,12 @@ This warning appears when `overwrite_existing_users=false` but the ingestion pip
 have graph access (typically file-based sinks). Solutions:
 
 - Use the DataHub REST sink instead of file-based output
+- Add `datahub_api` config to provide graph access with file-based sinks:
+  ```yaml
+  datahub_api:
+    server: "http://localhost:8080"
+    # token: "..." # if authentication is required
+  ```
 - Set `overwrite_existing_users=true` to suppress the warning (users will be created/updated)
 - Set `create_corp_user=false` if you don't need user creation at all
 
