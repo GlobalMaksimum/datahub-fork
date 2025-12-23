@@ -22,7 +22,7 @@ from datahub.ingestion.source.powerbi.dataplatform_instance_resolver import (
 )
 from datahub.ingestion.source.powerbi.powerbi import Mapper
 from datahub.ingestion.source.powerbi.rest_api_wrapper.data_classes import User
-from datahub.metadata.schema_classes import CorpUserInfoClass, CorpUserKeyClass
+from datahub.metadata.schema_classes import CorpUserInfoClass
 
 
 @pytest.fixture
@@ -124,7 +124,6 @@ class TestCorpUserInfoEmission:
 
         assert len(mcps) == 1
         assert isinstance(mcps[0].aspect, CorpUserInfoClass)
-        assert not isinstance(mcps[0].aspect, CorpUserKeyClass)
 
     def test_user_info_has_display_name_email_active(
         self,
@@ -368,7 +367,7 @@ class TestCustomProperties:
         mock_reporter,
         mock_dataplatform_resolver,
     ):
-        """graphId=None → not in customProperties."""
+        """graphId="" (empty string) → not in customProperties."""
         user_no_graph_id = User(
             id="user888",
             displayName="Test User",

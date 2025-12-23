@@ -933,15 +933,12 @@ class Mapper:
         """
         logger.debug(f"Mapping user {user.displayName}(id={user.id}) to DataHub user")
 
-        # Build user URN
         user_id = user.get_urn_part(
             use_email=self.__config.ownership.use_powerbi_email,
             remove_email_suffix=self.__config.ownership.remove_email_suffix,
         )
         user_urn = builder.make_user_urn(user_id)
 
-        # Check if we should skip this user's entity creation (only when create_corp_user=True)
-        # We still generate MCPs for ownership URN extraction - filtering happens at output
         if self.__config.ownership.create_corp_user and self._should_skip_user(
             user_urn
         ):
@@ -951,7 +948,6 @@ class Mapper:
             )
             self._skipped_user_urns.add(user_urn)
 
-        # Log at DEBUG level for data quality monitoring (INFO is too noisy)
         if not user.emailAddress:
             logger.debug(f"PowerBI user {user.displayName} ({user.id}) has no email")
         if not user.displayName:
