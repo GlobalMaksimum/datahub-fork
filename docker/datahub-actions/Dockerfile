@@ -85,6 +85,10 @@ ENV UV_INDEX_URL=${PIP_MIRROR_URL}
 RUN if [ "${PIP_MIRROR_URL}" != "https://pypi.python.org/simple" ] ; then uvx --no-cache pip config set global.index-url ${PIP_MIRROR_URL} ; fi && \
     if [ -n "${PIP_EXTRA_INDEX_URL}" ] ; then uvx --no-cache pip config set global.extra-index-url ${PIP_EXTRA_INDEX_URL} ; fi
 
+# Copy constraints file and configure UV to use it for all installs
+COPY ./docker/snippets/ingestion/constraints.txt /constraints.txt
+ENV UV_CONSTRAINT=/constraints.txt
+
 USER datahub
 WORKDIR $HOME
 RUN uv venv --python "$PYTHON_VERSION"
@@ -492,6 +496,10 @@ RUN apk --no-cache add \
 
 RUN if [ "${PIP_MIRROR_URL}" != "https://pypi.python.org/simple" ] ; then uvx --no-cache pip config set global.index-url ${PIP_MIRROR_URL} ; fi
 ENV UV_INDEX_URL=${PIP_MIRROR_URL}
+
+# Copy constraints file and configure UV to use it for all installs
+COPY ./docker/snippets/ingestion/constraints.txt /constraints.txt
+ENV UV_CONSTRAINT=/constraints.txt
 
 # clang required for python-build-standalone compatibility
 ENV CC=clang
