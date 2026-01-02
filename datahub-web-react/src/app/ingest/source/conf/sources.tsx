@@ -18,6 +18,7 @@ import redshiftConfig from '@app/ingest/source/conf/redshift/redshift';
 import sacConfig from '@app/ingest/source/conf/sac/sac';
 import snowflakeConfig from '@app/ingest/source/conf/snowflake/snowflake';
 import tableauConfig from '@app/ingest/source/conf/tableau/tableau';
+import singlestoreConfig from '@app/ingest/source/conf/singlestore/singlestore';
 import { SourceConfig } from '@app/ingest/source/conf/types';
 import { resolveRuntimePath } from '@utils/runtimeBasePath';
 
@@ -43,6 +44,7 @@ export const SOURCE_TEMPLATE_CONFIGS: Array<SourceConfig> = [
     lookerConfig,
     tableauConfig,
     mysqlConfig,
+    singlestoreConfig,
     postgresConfig,
     mongoConfig,
     azureAdConfig,

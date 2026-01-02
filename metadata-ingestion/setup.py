@@ -384,6 +384,8 @@ databricks = {
 
 mysql = {"pymysql>=1.0.2"}
 
+singlestore = {*mysql, "sqlalchemy-singlestoredb-backticks-patched==1.1.1"}
+
 sac = {
     "requests",
     "pyodata>=1.11.1",
@@ -528,6 +530,7 @@ plugins: Dict[str, Set[str]] = {
     "mysql": sql_common | mysql,
     # mariadb should have same dependency as mysql
     "mariadb": sql_common | mysql,
+    "singlestore": sql_common | singlestore,
     "okta": {"okta~=1.7.0", "nest-asyncio"},
     "oracle": sql_common | {"oracledb"},
     "postgres": sql_common | postgres_common,
@@ -714,6 +717,7 @@ base_dev_requirements = {
             "redash",
             "redshift",
             "s3",
+            "singlestore",
             "snowflake",
             "snaplogic",
             "slack",
@@ -770,6 +774,7 @@ full_test_dev_requirements = {
             "mssql",
             "mssql-odbc",
             "mysql",
+            "singlestore",
             "mariadb",
             "redash",
             "vertica",
@@ -835,6 +840,7 @@ entry_points = {
         "redash = datahub.ingestion.source.redash:RedashSource",
         "redshift = datahub.ingestion.source.redshift.redshift:RedshiftSource",
         "slack = datahub.ingestion.source.slack.slack:SlackSource",
+        "singlestore = datahub.ingestion.source.sql.singlestore:SinglestoreSource",
         "snowflake = datahub.ingestion.source.snowflake.snowflake_v2:SnowflakeV2Source",
         "snowflake-summary = datahub.ingestion.source.snowflake.snowflake_summary:SnowflakeSummarySource",
         "snowflake-queries = datahub.ingestion.source.snowflake.snowflake_queries:SnowflakeQueriesSource",

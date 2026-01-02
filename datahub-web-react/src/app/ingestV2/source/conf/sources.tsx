@@ -16,6 +16,7 @@ import oracleConfig from '@app/ingestV2/source/conf/oracle/oracle';
 import postgresConfig from '@app/ingestV2/source/conf/postgres/postgres';
 import redshiftConfig from '@app/ingestV2/source/conf/redshift/redshift';
 import sacConfig from '@app/ingestV2/source/conf/sac/sac';
+import singlestoreConfig from '@app/ingestV2/source/conf/singlestore/singlestore';
 import snowflakeConfig from '@app/ingestV2/source/conf/snowflake/snowflake';
 import tableauConfig from '@app/ingestV2/source/conf/tableau/tableau';
 import { SourceConfig } from '@app/ingestV2/source/conf/types';
@@ -42,6 +43,7 @@ export const SOURCE_TEMPLATE_CONFIGS: Array<SourceConfig> = [
     lookerConfig,
     tableauConfig,
     mysqlConfig,
+    singlestoreConfig,
     postgresConfig,
     mongoConfig,
     azureAdConfig,

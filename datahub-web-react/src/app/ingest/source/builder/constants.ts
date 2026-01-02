@@ -43,6 +43,7 @@ import tableauLogo from '@images/tableaulogo.png';
 import trinoLogo from '@images/trinologo.png';
 import vertexAI from '@images/vertexai.png';
 import verticaLogo from '@images/verticalogo.png';
+import singlestoreLogo from '@images/singlestorelogo.png';
 
 export const ATHENA = 'athena';
 export const ATHENA_URN = `urn:li:dataPlatform:${ATHENA}`;
@@ -153,6 +154,9 @@ export const VERTEXAI_URN = `urn:li:dataPlatform:${VERTEX_AI}`;
 export const SNAPLOGIC = 'snaplogic';
 export const SNAPLOGIC_URN = `urn:li:dataPlatform:${SNAPLOGIC}`;
 
+export const SINGLESTORE = 'singlestore';
+export const SINGLESTORE_URN = `urn:li:dataPlatform:${SINGLESTORE}`;
+
 export const PLATFORM_URN_TO_LOGO = {
     [ATHENA_URN]: athenaLogo,
     [AZURE_URN]: azureLogo,
@@ -200,6 +204,7 @@ export const PLATFORM_URN_TO_LOGO = {
     [NEO4J_URN]: neo4j,
     [VERTEXAI_URN]: vertexAI,
     [SNAPLOGIC_URN]: snaplogic,
+    [SINGLESTORE_URN]: singlestoreLogo,
 };
 
 export const SOURCE_TO_PLATFORM_URN = {

@@ -41,6 +41,7 @@ import tableauLogo from '@images/tableaulogo.png';
 import trinoLogo from '@images/trinologo.png';
 import vertexAI from '@images/vertexai.png';
 import verticaLogo from '@images/verticalogo.png';
+import singlestoreLogo from '@images/singlestorelogo.png';
 
 export const ATHENA = 'athena';
 export const ATHENA_URN = `urn:li:dataPlatform:${ATHENA}`;
@@ -145,6 +146,8 @@ export const NEO4J = 'neo4j';
 export const NEO4J_URN = `urn:li:dataPlatform:${NEO4J}`;
 export const VERTEX_AI = 'vertexai';
 export const VERTEXAI_URN = `urn:li:dataPlatform:${VERTEX_AI}`;
+export const SINGLESTORE = 'singlestore';
+export const SINGLESTORE_URN = `urn:li:dataPlatform:${SINGLESTORE}`;
 
 export const PLATFORM_URN_TO_LOGO = {
     [ATHENA_URN]: athenaLogo,
@@ -191,6 +194,7 @@ export const PLATFORM_URN_TO_LOGO = {
     [DATAHUB_URN]: datahubLogo,
     [NEO4J_URN]: neo4j,
     [VERTEXAI_URN]: vertexAI,
+    [SINGLESTORE_URN]: singlestoreLogo,
 };
 
 export const SOURCE_TO_PLATFORM_URN = {

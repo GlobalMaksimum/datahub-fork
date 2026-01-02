@@ -625,7 +625,7 @@ def get_fully_qualified_table_name(
         .replace("`", "")
     )
 
-    if platform in ("athena", "hive", "mysql", "clickhouse"):
+    if platform in ("athena", "hive", "mysql", "clickhouse", "singlestore",):
         # it two tier database system (athena, hive, mysql), just take final 2
         fully_qualified_table_name = ".".join(
             fully_qualified_table_name.split(".")[-2:]
@@ -813,6 +813,7 @@ def get_overridden_info(
         "hive",
         "mysql",
         "teradata",
+        "singlestore",
     ):  # Two tier databases
         upstream_db = None
 

@@ -209,6 +209,16 @@
     displayName: MySQL
     type: RELATIONAL_DB
     logoUrl: "assets/platforms/mysqllogo.png"
+- entityUrn: urn:li:dataPlatform:singlestore
+  entityType: dataPlatform
+  aspectName: dataPlatformInfo
+  changeType: UPSERT
+  aspect:
+    datasetNameDelimiter: "."
+    name: singlestore
+    displayName: SingleStore
+    type: RELATIONAL_DB
+    logoUrl: "assets/platforms/singlestorelogo.png"
 - entityUrn: urn:li:dataPlatform:db2
   entityType: dataPlatform
   aspectName: dataPlatformInfo
